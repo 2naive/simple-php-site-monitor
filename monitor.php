@@ -3,6 +3,8 @@
     /**
      *  Simple PHP Site Monitor
      *  v.0.0.1
+     *
+     *  @usage php monitor.php mail@domain.ru 79261234567 sms_ru-api-key
      */
 
     # Setting time limit
@@ -31,7 +33,7 @@
      * @param  array $log_arr information array
      * @return void
      */
-    function _log($log_arr)
+    function    _log($log_arr)
     {
         if( ! is_array($log_arr))
             return;
@@ -64,7 +66,34 @@
      */
     function    _callback($log_arr)
     {
-        # code...
+        global $argv;
+
+        try {
+
+            $result_arr = array(
+                $log_arr['url'],
+                $log_arr['http_code'],
+                intval($log_arr['total_time']),
+                $log_arr['curl_error']
+            );
+
+            if( ! empty($argv[1]))
+            {
+                mail($argv[1], "Monitoring: " . $log_arr['url'], implode("\r\n", $result_arr));
+            }
+
+            if( ! empty($argv[2]) &&  ! empty($argv[3])) {
+
+                file_get_contents("http://sms.ru/sms/send?api_id={$argv[2]}&to={$argv[3]}&text=" . urlencode(implode(' # ', $result_arr)));
+
+            }
+
+
+        } catch (Exception $e) {
+
+            _echo($e->getMessage());
+
+        }
     }
 
     function    _echo($str)
