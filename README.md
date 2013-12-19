@@ -7,7 +7,7 @@ Usage
 =======================
 
 Add to cron: 
-`05 * * * *  /usr/bin/php ~/simple-php-site-monitor/monitor.php mail@domain.com 25bae55e-8ced-d304-3d76-40d7ebc1f965 79291234567`
+`*/5 * * * *  /usr/bin/php ~/simple-php-site-monitor/monitor.php mail@domain.com 25bae55e-8ced-d304-3d76-40d7ebc1f965 79291234567`
 
 Params:
  - (0) /path/to/monitor.php
