@@ -73,7 +73,7 @@
             $result_arr = array(
                 $log_arr['url'],
                 $log_arr['http_code'],
-                intval($log_arr['total_time']),
+                (string) round($log_arr['total_time']),
                 $log_arr['curl_error']
             );
 
@@ -84,7 +84,20 @@
 
             if( ! empty($argv[2]) &&  ! empty($argv[3])) {
 
-                file_get_contents("http://sms.ru/sms/send?api_id={$argv[2]}&to={$argv[3]}&text=" . urlencode(implode(' # ', $result_arr)));
+                $ch = curl_init("http://sms.ru/sms/send");
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, array(
+
+                    "api_id"    =>  $argv[2],
+                    "to"        =>  $argv[3],
+                    "text"      =>  implode(' ', $result_arr)
+
+                ));
+                $body = curl_exec($ch);
+                curl_close($ch);
+
+                # TODO: response checks !
 
             }
 
