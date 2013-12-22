@@ -4,7 +4,7 @@
      *  Simple PHP Site Monitor
      *  v.0.0.1
      *
-     *  @usage php monitor.php mail@domain.ru 79261234567 sms_ru-api-key
+     *  @usage php monitor.php mail@domain.ru sms_ru-api-key 79261234567
      */
 
     # Setting time limit
