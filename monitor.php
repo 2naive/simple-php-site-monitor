@@ -5,7 +5,8 @@
      *  v.0.0.1
      *
      *  @usage php monitor.php mail@domain.ru[,mail2@domain.ru,...] http://webhook.com/do[,http://webhook.com/do2..]
-     *  @todo : head/get requests
+     *  @todo head/get requests
+     *  @todo Message templates
      */
 
     # Setting time limit
@@ -43,7 +44,7 @@
         {
             $_array = array();
 
-            if(strpos($list, ',') !== FALSE) ) {
+            if(strpos($list, ',') !== FALSE) {
                 $_array = array_map('trim', explode(',', $list));
             } else {
                 $_array[] = $list;
@@ -62,11 +63,14 @@
                 $log_arr['curl_error']
             );
 
+            $_message = implode("\r\n", $result_arr);
+
             if( ! empty($argv[1]))
             {
                 $emails = list2array($argv[1]);
                 foreach ($emails as $key => $email) {
-                    mail($email, "Monitoring: " . $log_arr['url'], implode("\r\n", $result_arr));
+                    mail($email, "Monitoring: " . $log_arr['url'], $_message);
+                    _echo("MAIL: $email");
                 }
             }
 
@@ -76,11 +80,14 @@
 
                 foreach ($webhooks as $key => $webhook) {
 
+                    $webhook = str_replace('###message###', urlencode($_message), $webhook);
                     $ch = curl_init($webhook);
                     curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
                     curl_setopt($ch, CURLOPT_TIMEOUT, 30);
                     $body = curl_exec($ch);
                     curl_close($ch);
+
+                    _echo("WEBHOOK: $webhook");
 
                     # TODO: response checks !
                 }
@@ -181,6 +188,9 @@
         curl_setopt($ch, CURLOPT_USERAGENT, USERAGENT);
         #  follow redirects
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        # IPV4 ONLY
+        # CURLOPT_IPRESOLVE is available since curl 7.10.8
+        curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
 
         $result = curl_exec($ch);
 
