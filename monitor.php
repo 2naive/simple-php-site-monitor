@@ -4,11 +4,12 @@
      *  Simple PHP Site Monitor
      *  v.0.0.1
      *
-     *  @usage php monitor.php mail@domain.ru sms_ru-api-key 79261234567
+     *  @usage php monitor.php mail@domain.ru[,mail2@domain.ru,...] http://webhook.com/do[,http://webhook.com/do2..]
+     *  @todo : head/get requests
      */
 
     # Setting time limit
-    ini_set('max_execution_time',0);
+    ini_set('max_execution_time', 0);
 
     # Setting current paths
     define('PATH',              dirname(__FILE__));
@@ -28,12 +29,78 @@
     $servers                    = array();
 
     /**
+     * Monitoring error callback function
+     *
+     * @param  array $log_arr information array
+     * @param  string $result Request result
+     * @return void
+     */
+    function    _callback($log_arr, $result)
+    {
+        global $argv;
+
+        function list2array($list)
+        {
+            $_array = array();
+
+            if(strpos($list, ',') !== FALSE) ) {
+                $_array = array_map('trim', explode(',', $list));
+            } else {
+                $_array[] = $list;
+            }
+
+            return $_array;
+
+        }
+
+        try {
+
+            $result_arr = array(
+                $log_arr['url'],
+                $log_arr['http_code'],
+                (string) round($log_arr['total_time']),
+                $log_arr['curl_error']
+            );
+
+            if( ! empty($argv[1]))
+            {
+                $emails = list2array($argv[1]);
+                foreach ($emails as $key => $email) {
+                    mail($email, "Monitoring: " . $log_arr['url'], implode("\r\n", $result_arr));
+                }
+            }
+
+            if( ! empty($argv[2]) ) {
+
+                $webhooks = list2array($argv[2]);
+
+                foreach ($webhooks as $key => $webhook) {
+
+                    $ch = curl_init($webhook);
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+                    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+                    $body = curl_exec($ch);
+                    curl_close($ch);
+
+                    # TODO: response checks !
+                }
+            }
+
+
+        } catch (Exception $e) {
+
+            _echo($e->getMessage());
+
+        }
+    }
+
+    /**
      * Monitoring error log function
      *
      * @param  array $log_arr information array
      * @return void
      */
-    function    _log($log_arr)
+    function    _log($log_arr, $result)
     {
         if( ! is_array($log_arr))
             return;
@@ -56,57 +123,6 @@
 
         @fwrite($fp_log, $result_str);
         @fclose($fp_log);
-    }
-
-    /**
-     * Monitoring error callback function
-     *
-     * @param  array $log_arr information array
-     * @return void
-     */
-    function    _callback($log_arr)
-    {
-        global $argv;
-
-        try {
-
-            $result_arr = array(
-                $log_arr['url'],
-                $log_arr['http_code'],
-                (string) round($log_arr['total_time']),
-                $log_arr['curl_error']
-            );
-
-            if( ! empty($argv[1]))
-            {
-                mail($argv[1], "Monitoring: " . $log_arr['url'], implode("\r\n", $result_arr));
-            }
-
-            if( ! empty($argv[2]) &&  ! empty($argv[3])) {
-
-                $ch = curl_init("http://sms.ru/sms/send");
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-                curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-                curl_setopt($ch, CURLOPT_POSTFIELDS, array(
-
-                    "api_id"    =>  $argv[2],
-                    "to"        =>  $argv[3],
-                    "text"      =>  implode(' ', $result_arr)
-
-                ));
-                $body = curl_exec($ch);
-                curl_close($ch);
-
-                # TODO: response checks !
-
-            }
-
-
-        } catch (Exception $e) {
-
-            _echo($e->getMessage());
-
-        }
     }
 
     function    _echo($str)
@@ -133,8 +149,13 @@
         # One per line
         while (($line = fgets($fp_list)) !== false) {
 
-            $line               = trim($line);
-            $servers[]          = $line;
+            $line           = trim($line);
+
+            /**
+             * Skip if #
+             */
+            if($line[0] != '#')
+                $servers[]  = $line;
 
         }
 
@@ -161,7 +182,7 @@
         #  follow redirects
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
 
-        curl_exec($ch);
+        $result = curl_exec($ch);
 
         $curl_info               = curl_getinfo($ch);
 
@@ -174,8 +195,8 @@
 
             $curl_info['curl_error'] = curl_error($ch);
 
-            _log($curl_info);
-            _callback($curl_info);
+            _log($curl_info, $result);
+            _callback($curl_info, $result);
 
             _echo($curl_info['url'] . " - ERROR");
 
