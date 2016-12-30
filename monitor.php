@@ -3,6 +3,7 @@
     /**
      *  Simple PHP Site Monitor
      *  v.0.0.1
+     *  @require php 5.5
      *
      *  @usage php monitor.php mail@domain.ru[,mail2@domain.ru,...] http://webhook.com/do[,http://webhook.com/do2..]
      *  @todo head/get requests
@@ -64,14 +65,17 @@
                 'http_code' => $log_arr['http_code'],
                 'error'     => $log_arr['curl_error'],
                 'time_ms'      => array(
-                    'lookup'    => round($log_arr['namelookup_time'] * 1000),
-                    'connect'   => round( ($log_arr['connect_time'] - $log_arr['namelookup_time'])   * 1000),
-                    'transfer'  => round( ($log_arr['total_time']   - $log_arr['pretransfer_time'])  * 1000),
-                    'total'     => round($log_arr['total_time']      * 1000)
+                    'lookup'    => round(1000 * $log_arr['namelookup_time'] ),
+                    'connect'   => round(1000 * ($log_arr['connect_time']       - $log_arr['namelookup_time']) ),
+                    'ssl'       => round(1000 * ($log_arr['appconnect_time']    - $log_arr['connect_time']) ),
+                    //'redirect'  => round(1000 * $log_arr['redirect_time'] ),
+                    'request'   => round(1000 * ($log_arr['starttransfer_time'] - $log_arr['pretransfer_time']) ),
+                    'response'  => round(1000 * ($log_arr['total_time']         - $log_arr['starttransfer_time']) ),
+                    'total'     => round(1000 * $log_arr['total_time'] )
                 )
             );
 
-            $_message = json_encode($result_arr, JSON_UNESCAPED_SLASHES);
+            $_message = json_encode($result_arr, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
             //$_message = var_export($result_arr, TRUE);
             //$_message = implode("\r\n", $result_arr);
 
@@ -90,8 +94,8 @@
 
                 foreach ($webhooks as $key => $webhook) {
 
-                    $webhook = str_replace('###message###', $_message, $webhook);
-                    //$webhook = str_replace('###message###', urlencode($_message), $webhook);
+                    //$webhook = str_replace('###message###', $_message, $webhook);
+                    $webhook = str_replace('###message###', urlencode($_message), $webhook);
                     $ch = curl_init($webhook);
                     curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
                     curl_setopt($ch, CURLOPT_TIMEOUT, 30);
@@ -208,7 +212,9 @@
 
         $result = curl_exec($ch);
 
-        $curl_info               = curl_getinfo($ch);
+        $curl_info                      = curl_getinfo($ch);
+        // PHP 5.5+ only
+        $curl_info['appconnect_time']   = curl_getinfo($ch, CURLINFO_APPCONNECT_TIME);
 
         if( ! curl_errno($ch) && $curl_info['http_code'] == 200) {
 
