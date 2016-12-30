@@ -65,13 +65,13 @@
                 'http_code' => $log_arr['http_code'],
                 'error'     => $log_arr['curl_error'],
                 'time_ms'      => array(
-                    'lookup'    => round(1000 * $log_arr['namelookup_time'] ),
-                    'connect'   => round(1000 * ($log_arr['connect_time']       - $log_arr['namelookup_time']) ),
-                    'ssl'       => round(1000 * ($log_arr['appconnect_time']    - $log_arr['connect_time']) ),
-                    //'redirect'  => round(1000 * $log_arr['redirect_time'] ),
-                    'request'   => round(1000 * ($log_arr['starttransfer_time'] - $log_arr['pretransfer_time']) ),
-                    'response'  => round(1000 * ($log_arr['total_time']         - $log_arr['starttransfer_time']) ),
-                    'total'     => round(1000 * $log_arr['total_time'] )
+                    'lookup'    => round(1000 * $log_arr['namelookup_time'], 2 ),
+                    'connect'   => round(1000 * ($log_arr['connect_time']       - $log_arr['namelookup_time']), 2 ),
+                    'ssl'       => round(1000 * ($log_arr['appconnect_time']    - $log_arr['connect_time']), 2 ),
+                    //'redirect'  => round(1000 * $log_arr['redirect_time'], 2 ),
+                    'request'   => round(1000 * ($log_arr['starttransfer_time'] - $log_arr['pretransfer_time']), 2 ),
+                    'response'  => round(1000 * ($log_arr['total_time']         - $log_arr['starttransfer_time']), 2 ),
+                    'total'     => round(1000 * $log_arr['total_time'], 2 )
                 )
             );
 
