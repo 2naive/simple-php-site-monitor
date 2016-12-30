@@ -40,30 +40,40 @@
     {
         global $argv;
 
-        function list2array($list)
-        {
-            $_array = array();
+        if ( ! function_exists('list2array') ) {
+            function list2array($list)
+            {
+                $_array = array();
 
-            if(strpos($list, ',') !== FALSE) {
-                $_array = array_map('trim', explode(',', $list));
-            } else {
-                $_array[] = $list;
+                if(strpos($list, ',') !== FALSE) {
+                    $_array = array_map('trim', explode(',', $list));
+                } else {
+                    $_array[] = $list;
+                }
+
+                return $_array;
+
             }
-
-            return $_array;
-
         }
 
         try {
 
             $result_arr = array(
-                $log_arr['url'],
-                $log_arr['http_code'],
-                (string) round($log_arr['total_time']),
-                $log_arr['curl_error']
+                'url'       => $log_arr['url'],
+                'ip'        => $log_arr['primary_ip'],
+                'http_code' => $log_arr['http_code'],
+                'error'     => $log_arr['curl_error'],
+                'time_ms'      => array(
+                    'lookup'    => round($log_arr['namelookup_time'] * 1000),
+                    'connect'   => round( ($log_arr['connect_time'] - $log_arr['namelookup_time'])   * 1000),
+                    'transfer'  => round( ($log_arr['total_time']   - $log_arr['pretransfer_time'])  * 1000),
+                    'total'     => round($log_arr['total_time']      * 1000)
+                )
             );
 
-            $_message = implode("\r\n", $result_arr);
+            $_message = json_encode($result_arr, JSON_UNESCAPED_SLASHES);
+            //$_message = var_export($result_arr, TRUE);
+            //$_message = implode("\r\n", $result_arr);
 
             if( ! empty($argv[1]))
             {
@@ -80,7 +90,8 @@
 
                 foreach ($webhooks as $key => $webhook) {
 
-                    $webhook = str_replace('###message###', urlencode($_message), $webhook);
+                    $webhook = str_replace('###message###', $_message, $webhook);
+                    //$webhook = str_replace('###message###', urlencode($_message), $webhook);
                     $ch = curl_init($webhook);
                     curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
                     curl_setopt($ch, CURLOPT_TIMEOUT, 30);
@@ -90,6 +101,8 @@
                     _echo("WEBHOOK: $webhook");
 
                     # TODO: response checks !
+
+                    usleep(1000000 / 2);
                 }
             }
 
@@ -120,6 +133,7 @@
         $result_arr             = array(
             date("Y.m.d H:i:s"),
             $log_arr['url'],
+            $log_arr['primary_ip'],
             $log_arr['http_code'],
             $log_arr['total_time'],
             $log_arr['curl_error']
